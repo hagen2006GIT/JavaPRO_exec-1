@@ -19,7 +19,7 @@ public class TestRunner {
         Map<Integer,List<Method>> mapMainSuites=new TreeMap<Integer,List<Method>>(Collections.reverseOrder()); //map для выполнения методов в соответствии с их приоритетами
         List<Method> mapBeforeTest=new ArrayList<>(); // список методов, выполняемых ПЕРЕД каждым тестом
         List<Method> mapAfterTest=new ArrayList<>(); // список методов, выполняемых ПОСЛЕ каждого теста
-
+//
         for(Method method:arrMethod){
             Annotation[] annotations=method.getAnnotations();
             for (Annotation annotation : annotations) {
