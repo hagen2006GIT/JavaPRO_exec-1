@@ -16,7 +16,7 @@ public class Animal {
     @Test public void drink() {
         System.out.println("Animal is drinking");
     }
-    @Test (priority = 3) public void run() {
+    @Test (priority = 6) public void run() {
         System.out.println("Animal is running");
     }
     @Test (priority = 7) public void swim() {
