@@ -1,7 +1,6 @@
 package org.example;
 
 import annotation.*;
-import java.lang.annotation.Annotation;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -16,90 +15,76 @@ public class TestRunner {
         Method[] arrMethod= c.getDeclaredMethods();
         Constructor<Animal> constructor=c.getConstructor();
         Animal animal=constructor.newInstance();
-        Map<Integer,List<Method>> mapMainSuites=new TreeMap<Integer,List<Method>>(Collections.reverseOrder()); //map для выполнения методов в соответствии с их приоритетами
+        Method methodBeforeSuite=null;
+        Method methodAfterSuite=null;
         List<Method> mapBeforeTest=new ArrayList<>(); // список методов, выполняемых ПЕРЕД каждым тестом
         List<Method> mapAfterTest=new ArrayList<>(); // список методов, выполняемых ПОСЛЕ каждого теста
+        ArrayList<Method> mapTests=new ArrayList<>(); // список основных "тестов"
 
-        for(Method method:arrMethod){
-            Annotation[] annotations=method.getAnnotations();
-            for (Annotation annotation : annotations) {
-                if (annotation instanceof BeforeSuite) {
-                    if (!Modifier.isStatic(method.getModifiers())) {
-                        throw new RuntimeException("Static methods only allowed with BeforeSuite annotation");
-                    }
-                    if (mapMainSuites.get(Integer.MAX_VALUE)!=null) {
-                        throw new RuntimeException("Only one @BeforeSuite are allowed");
-                    }
-                    mapMainSuites.put(Integer.MAX_VALUE,new ArrayList<Method>(Collections.singleton(method)));
-                } else if (annotation instanceof AfterSuite) {
-                    if (!Modifier.isStatic(method.getModifiers())) {
-                        throw new RuntimeException("Static methods only allowed with AfterSuite annotation");
-                    }
-                    if (mapMainSuites.get(Integer.MIN_VALUE) != null) {
-                        throw new RuntimeException("Only one @AfterSuite are allowed");
-                    }
-                    mapMainSuites.put(Integer.MIN_VALUE, new ArrayList<Method>(Collections.singleton(method)));
+        for(Method method:arrMethod) {
+            if (method.getAnnotation(BeforeSuite.class) != null) { // проверим метод с аннотацией @BeforeSuite
+                if (!Modifier.isStatic(method.getModifiers())) {
+                    throw new RuntimeException("Static methods only allowed with BeforeSuite annotation");
                 }
-// формирование списка на выполнение методов с аннотациями @Test
-                 else if (annotation instanceof Test) {
-                    if (mapMainSuites.get(method.getAnnotation(Test.class).priority())==null) {
-                        mapMainSuites.put(method.getAnnotation(Test.class).priority(),new ArrayList<Method>(Collections.singleton(method)));
-                    } else {
-                        mapMainSuites.get(method.getAnnotation(Test.class).priority()).add(method);
+                if (methodBeforeSuite != null) {
+                    throw new RuntimeException("Only one @BeforeSuite are allowed");
+                }
+                methodBeforeSuite = method;
+            } else if (method.getAnnotation(AfterSuite.class) != null) { // проверим метод с аннотацией @AfterSuite
+                if (!Modifier.isStatic(method.getModifiers())) {
+                    throw new RuntimeException("Static methods only allowed with AfterSuite annotation");
+                }
+                if (methodAfterSuite != null) {
+                    throw new RuntimeException("Only one @AfterSuite are allowed");
+                }
+                methodAfterSuite = method;
+            } else if (method.getAnnotation(BeforeTest.class) != null) { // проверим метод с аннотацией @BeforeTest
+                mapBeforeTest.add(method);
+            } else if (method.getAnnotation(AfterTest.class) != null) { // проверим метод с аннотацией @AfterTest
+                mapAfterTest.add(method);
+            } else if (method.getAnnotation(Test.class) != null) { // соберем список методов с аннотацией @Test
+                mapTests.add(method);
+            } else if (method.getAnnotation(CsvSource.class) != null) { // обработка методов с аннотацией @CsvSource
+                String[] params = method.getAnnotation(CsvSource.class).value().split(",");
+                Class[] paramTypes = method.getParameterTypes();
+                Object[] paramsArray = new Object[paramTypes.length];
+                for (int i = 0; i < paramTypes.length; i++) {
+                    switch (paramTypes[i].getName()) {
+                        case "java.lang.String":
+                            paramsArray[i] = params[i].trim();
+                            break;
+                        case "int":
+                            paramsArray[i] = Integer.parseInt(params[i].trim());
+                            break;
+                        case "java.lang.Boolean":
+                            paramsArray[i] = Boolean.parseBoolean(params[i]);
+                            break;
                     }
                 }
-// проверка аннотаций @BeforeTest и @AfterTest и подготовка списка выполняемых методов в соответствии с семантикой аннотации
-                else if (annotation instanceof BeforeTest) {
-                    mapBeforeTest.add(method);
+                System.out.println("*");
+                method.invoke(animal,paramsArray);
+                System.out.println("*");
+            }
+        }
+        mapTests.sort(new PriorityComparator()); // сортировка списка "тестов" в порядке убывания приоритета
+        if (methodBeforeSuite!=null) { // выполнение метода @BeforeSuite (если есть)
+            methodBeforeSuite.invoke(animal);
+        }
+        for (Method m:mapTests) { // выполнение методов класса Animal в порядке убывания приоритетов аннотации @Test
+            if (!mapBeforeTest.isEmpty()) {
+                for (Method methodBeforeTest : mapBeforeTest) {
+                    methodBeforeTest.invoke(animal);
                 }
-                else if (annotation instanceof AfterTest) {
-                    mapAfterTest.add(method);
-                }
-// проверка на аннотацию @CsvSource
-                else if (annotation instanceof CsvSource) {
-                    String[] params=method.getAnnotation(CsvSource.class).value().split(",");
-                    Class[] paramTypes = method.getParameterTypes();
-                    Object[] paramsArray = new Object[paramTypes.length];
-                    for (int i = 0; i < paramTypes.length; i++) {
-                        switch (paramTypes[i].getName()) {
-                            case "java.lang.String":
-                                paramsArray[i] = params[i].trim();
-                                break;
-                            case "int":
-                                paramsArray[i] = Integer.parseInt(params[i].trim());
-                                break;
-                            case "java.lang.Boolean":
-                                paramsArray[i] = Boolean.parseBoolean(params[i]);
-                                break;
-                        }
-                    }
-                    System.out.println("*");
-                    method.invoke(animal,paramsArray);
-                    System.out.println("*");
+            }
+            m.invoke(animal);
+            if (!mapAfterTest.isEmpty()) { // выполнение метода @AfterSuite (если есть)
+                for (Method methodAfterTest : mapAfterTest) {
+                    methodAfterTest.invoke(animal);
                 }
             }
         }
-// выполнение методов класса Animal в порядке убывания приоритетов аннотации @Test
-        for (Map.Entry<Integer,List<Method>> entry : mapMainSuites.entrySet()) {
-            for (Method method : entry.getValue()) {
-    // методы ПЕРЕД каждым тестом
-                if (!mapBeforeTest.isEmpty()
-                        && !method.isAnnotationPresent(BeforeSuite.class)
-                        && !method.isAnnotationPresent(AfterSuite.class)) {
-                    for (Method methodBeforeTest : mapBeforeTest) {
-                        methodBeforeTest.invoke(animal);
-                    }
-                }
-                method.invoke(animal); // выполнение основного теста
-    // методы ПОСЛЕ каждого теста
-                if (!mapBeforeTest.isEmpty()
-                        && !method.isAnnotationPresent(AfterSuite.class)
-                        && !method.isAnnotationPresent(BeforeSuite.class)) {
-                    for (Method methodAfterTest : mapAfterTest) {
-                        methodAfterTest.invoke(animal);
-                    }
-                }
-            }
+        if (methodAfterSuite!=null) { // выполнение метода @AfterSuite (если есть)
+            methodAfterSuite.invoke(animal);
         }
     }
 }
