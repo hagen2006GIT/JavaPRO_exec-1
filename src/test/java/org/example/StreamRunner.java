@@ -1,16 +1,15 @@
 package org.example;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.List;
+import java.sql.Array;
+import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class StreamRunner {
     public static void main(String[] args) {
 
-        System.out.println("Изначальный список целых чисел = " +
+        System.out.println("Изначальный список целых чисел: " +
                 Stream.of(5, 2, 10, 9, 4, 3, 10, 1, 13).collect(Collectors.toList()) + "\n");
 
         System.out.println("1. Удаление дубликатов: " +
@@ -39,26 +38,28 @@ public class StreamRunner {
                     .get()
         );
 
-        List<Person> persons = new ArrayList<Person>(
+        List<Person> persons = new ArrayList<>(
                 Arrays.asList(
-                    new Person("Alexandr", 10, Position.ENGINEER)
+                    new Person("Alexandr", 50, Position.ENGINEER)
                     ,new Person("Bob", 20, Position.MANAGER)
                     ,new Person("Smith", 30, Position.ENGINEER)
                     ,new Person("Michael", 40, Position.DIRECTOR)
-                    ,new Person("Arnold", 50, Position.ENGINEER)
-                    ,new Person("Max", 60, Position.ENGINEER)
+                    ,new Person("Arnold", 65, Position.ENGINEER)
+                    ,new Person("Max", 27, Position.ENGINEER)
                     ,new Person("John", 70, Position.ENGINEER)
                 )
         );
+        System.out.println("\nСписок сотрудников (Person): "+persons
+                .stream()
+                .map(it -> it.getName()+"-"+it.getAge()+"-"+it.getPosition())
+                .collect(Collectors.toList()));
 
-        System.out.println("sum = " +
+        System.out.println("4. 3 самых старших сотрудников с должностью «Инженер», в порядке убывания возраста = " +
                 persons.stream()
-                        .filter(it->it.getPosition()==Position.ENGINEER)
-//                        .sorted(Comparator.reverseOrder())
-                        .sorted(Comparator.comparingInt(it -> it.getAge()))
-                        .map(it -> it.getName())
-                        .peek(System.out::println)
-                        .sorted(Comparator.reverseOrder())
+                        .filter(it -> it.getPosition()==Position.ENGINEER)
+                        .sorted(Comparator.comparingInt(Person::getAge).reversed())
+// в мапе возраст в скобках добавил только для наглядности при оценки результата, алгоритм не аффектит
+                        .map(it -> it.getName()+" ("+it.getAge()+")")
                         .limit(3)
                         .collect(Collectors.toList()));
 
@@ -67,6 +68,47 @@ public class StreamRunner {
                         .filter(it->it.getPosition()==Position.ENGINEER)
                         .collect(Collectors.averagingInt(Person::getAge)
                 )
+        );
+
+        List<String> longWords = new ArrayList<String>
+                (Arrays.asList("АвтоМотоАелоФотоТелеРадиоМонтер"
+                        ,"ВодоГрязеТорфоПарафиноЛечение"
+                        ,"ЧетырёхСотПятидесятиСемиМиллиметровое"));
+        System.out.println("\n6. Самое длинное слово: "+longWords
+                .stream()
+                .max(Comparator.comparingInt(String::length))
+                .get()
+                +" из списка "+longWords
+        );
+
+        Map<String, Long> mapWords = Arrays.stream("один два один три два пять один два восемь десять один три один десять".split(" "))
+                .collect(Collectors.groupingBy(Function.identity(), Collectors.counting()));
+        System.out.println("\n7. Количество повторяющихся слов: "+mapWords);
+
+        System.out.println("\n8. Список в порядке увеличения длины слова: "+
+                Arrays.stream("в два а восемнадцать б семь тысяча доля целое".split(" "))
+                    .sorted()
+                    .sorted(Comparator.comparingInt(String::length))
+                    .toList()
+        );
+
+        String[] arr = {"один два три четыре пять","аб абв абвг абвгд абвгде","домашка по курсу java pro","задача номер девять stream api"};
+//        String[][] arr2 = new String[arr.length][]{{"один два три четыре пять"}};
+        String[][] arr2 = new String[][]{{"один два три четыре пять"}
+                                        ,{"аб абв абвг абвгд"}
+        };
+//        for (int i = 0; i < arr.length; i++) {
+//            System.arraycopy(arr[i].split(" "), 0, arr2[i], 0, arr[i].split(" ").length);
+//        }
+        System.out.println(Arrays.stream(
+                Arrays.stream(arr)
+                    .flatMap((p)->Arrays.asList(p.split(" "))
+                            .stream())
+                                .toArray(String[]::new)
+                )
+                .sorted(Comparator.comparingInt(String::length).reversed())
+                .findFirst()
+                .get()
         );
     }
 }

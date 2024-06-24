@@ -1,6 +1,6 @@
 package org.example;
 
-enum Position {
+public enum Position {
     ENGINEER
     ,DIRECTOR
     ,MANAGER;
