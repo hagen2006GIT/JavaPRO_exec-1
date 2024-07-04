@@ -92,7 +92,7 @@ public class StreamRunner {
         );
 
 // OK
-        String[] arr = {"один два три четыре пять","аб абв абвг абвгд абвгде","домашка по курсу java proPROproPROproPRO","задача номер девять stream api proPROproPROpro111"};
+        String[] arr = {"один два три четыре пять","аб абв абвг абвгд абвгде","домашка по курсу java proPR1234PR4321PRO","задача номер девять stream api proPROproPROpro111"};
         System.out.println("\nСамое длинное слова из массива строк: "+
             Arrays.stream(arr)
             .flatMap((p) -> Arrays.stream(p.split(" ")))
